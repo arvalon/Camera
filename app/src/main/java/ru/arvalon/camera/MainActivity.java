@@ -1,4 +1,4 @@
-package com.example.admin.camera;
+package ru.arvalon.camera;
 
 import android.Manifest;
 import android.content.Intent;
