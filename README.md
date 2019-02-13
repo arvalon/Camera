@@ -1,0 +1,1 @@
+Example capture foto and video by camera
