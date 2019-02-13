@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,14 +20,8 @@ import com.squareup.picasso.Picasso;
 
 import java.io.File;
 
-// FIXME: 06.02.2019 FileUriExposedException: file:///storage/emulated/0/Pictures/picture.jpg
-// exposed beyond app through ClipData.Item.getUri() at android.os.StrictMode.onFileUriExposed
-// on SDK 24+ (Android 7.0 Nougat)
-
-// https://stackoverflow.com/questions/38200282/android-os-fileuriexposedexception-file-storage-emulated-0-test-txt-exposed
-
 /**
- * Work with camera
+ * Example capture foto and video by camera
  * @author arvalon
  */
 public class MainActivity extends AppCompatActivity {
@@ -36,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String FILENAME = "picture.jpg";
 
     private static final String VIDEOFILENAME = "video.mp4";
+
+    private static final String  authority = ".ru.arvalon.camera.provider";
 
     private static final int TAKE_PHOTO = 1;
     private static final int PICK_IMAGE = 2;
@@ -49,19 +46,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         image = findViewById(R.id.image);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if(requestCode == PICK_IMAGE)
-        {
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
-            {
-                pickImageWrapper();
-            }
-        }
     }
 
     public void takePhoto(View view) {
@@ -85,16 +69,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Take foto */
     private void takePhoto() {
+
         File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        if(!dir.isDirectory())
+
+        if(!dir.isDirectory()){
             dir.mkdirs();
+        }
 
         File file = new File(dir, FILENAME);
 
-        // Intent на получение фотографии камерой
+        // Intent for foto capture
         Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        i.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
+
+        Uri uri = FileProvider.getUriForFile(this,getPackageName()+authority,file);
+
+        i.putExtra(MediaStore.ACTION_IMAGE_CAPTURE, uri);
+
         startActivityForResult(i, TAKE_PHOTO);
     }
 
@@ -103,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
         scan(picDir);
     }
 
+    /** need description */
     private void scan(File picsDir) {
         if(picsDir != null)
         {
@@ -124,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
         pickImageWrapper();
     }
 
+    /** check permission and pick image from device */
     private void pickImageWrapper() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -144,7 +138,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if(requestCode == PICK_IMAGE)
+        {
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            {
+                pickImageWrapper();
+            }
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         if(requestCode == PICK_IMAGE)
         {
             if(resultCode == RESULT_OK)
@@ -153,11 +161,7 @@ public class MainActivity extends AppCompatActivity {
                 {
                     Uri  uri = data.getData();
 
-                    Picasso
-                            .with(this)
-                            .load(uri)
-                            .fit()
-                            .into(image);
+                    Picasso.with(this).load(uri).fit().into(image);
                 }
             }
         }
@@ -169,21 +173,14 @@ public class MainActivity extends AppCompatActivity {
                         .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
 
                 File file = new File(dir, FILENAME);
-                if(file != null)
-                {
-                    Picasso
-                            .with(this)
-                            .load(file)
-                            .fit()
-                            .into(image);
-                }
+
+                Picasso.with(this).load(file).fit().into(image);
             }
         }
         else if(requestCode == TAKE_VIDEO)
         {
             if(resultCode == RESULT_OK)
             {
-                /* ... */
                 File dir = Environment
                         .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
                 scan(dir);
@@ -195,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
         takeVideoWrapper();
     }
 
+    /** check permissions */
     private void takeVideoWrapper() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -212,21 +210,21 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** capture video */
     private void takeVideo() {
         File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+
         if(!dir.isDirectory())
             dir.mkdirs();
-
-
 
         File file = new File(dir, VIDEOFILENAME);
 
         Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-        intent.putExtra(
-                MediaStore.EXTRA_OUTPUT, Uri.fromFile(file)
-        );
-        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
-        startActivityForResult(intent, TAKE_VIDEO);
 
+        Uri uri = FileProvider.getUriForFile(this,getPackageName()+authority,file);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
+
+        startActivityForResult(intent, TAKE_VIDEO);
     }
 }
